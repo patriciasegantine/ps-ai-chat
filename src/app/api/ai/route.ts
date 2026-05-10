@@ -1,6 +1,6 @@
 import { generateObject } from "ai";
 import { NextResponse } from "next/server";
-import { openrouter } from "@/app/ai/open-router";
+import { openrouter } from "@/ai/open-router";
 import { z } from "zod";
 
 
