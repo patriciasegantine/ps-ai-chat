@@ -1,9 +1,11 @@
-import { stepCountIs, streamText, tool } from "ai";
+import { convertToModelMessages, stepCountIs, streamText, tool } from "ai";
 import { NextResponse } from "next/server";
 import { openrouter } from "@/ai/open-router";
 import { z } from "zod/v3";
 
-export async function GET(request: Request) {
+export async function POST(request: Request) {
+  
+  const {messages} = await request.json()
   const { searchParams } = new URL(request.url);
   const username = searchParams.get("username") || "patriciasegantine";
   if (!process.env.OPENROUTER_API_KEY) {
@@ -46,44 +48,13 @@ export async function GET(request: Request) {
             return (await res.text()).substring(0, 5000);
           }
         }),
-        gitHubOrganizations: tool({
-          description: "Fetches the list of GitHub organizations that a user belongs to.",
-          inputSchema: z.object({
-            username: z.string().describe("The GitHub username.")
-          }),
-          execute: async ({username}) => {
-            const res = await fetch(`https://api.github.com/users/${username}/orgs`);
-            console.log(`[gitHubOrganizations] Status: ${res.status}`);
-            if (!res.ok) {
-              throw new Error(`GitHub API error: ${res.statusText}`);
-            }
-            const orgs = (await res.json()) as Array<{
-              login: string;
-              description: string | null;
-              avatar_url: string;
-            }>;
-            console.log(`[gitHubOrganizations] Organizations retrieved: ${orgs.length}`, orgs);
-            return {
-              username,
-              organizations: orgs.map((org) => ({
-                name: org.login,
-                description: org.description,
-                avatarUrl: org.avatar_url
-              }))
-            };
-          }
-        })
       },
       
-      prompt: `Fetch a comprehensive GitHub profile for user "${username}". Get their name, repository count, repository URLs, and organizations. Provide a complete summary.`,
+      messages: await convertToModelMessages(messages),
       stopWhen: stepCountIs(5),
-      
-      onStepFinish: ({toolResults}) => {
-        console.log(toolResults);
-      }
     });
 
-    return result.toTextStreamResponse();
+    return result.toUIMessageStreamResponse();
     
   } catch (error) {
     const message =
