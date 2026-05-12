@@ -38,17 +38,17 @@ export function Chat() {
     }
   }, []);
   
-  // useEffect(() => {
-  //   if (messages.length > 0 && status === 'streaming' && containerRef.current) {
-  //     containerRef.current.scrollTo({
-  //       top: containerRef.current.scrollHeight,
-  //       behavior: "smooth",
-  //     })
-  //   }
-  // }, [
-  //   messages,
-  //   status,
-  // ])
+  useEffect(() => {
+    if (messages.length > 0 && status === 'streaming' && containerRef.current) {
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: "smooth",
+      })
+    }
+  }, [
+    messages,
+    status,
+  ])
   
   return (
     <>
@@ -68,7 +68,7 @@ export function Chat() {
                 
                 {message.role === "user" && (
                   <div className="size-7 rounded-md bg-zinc-800 flex items-center justify-center">
-                    <User2 className="size-4 text-zinc-100" />
+                    <User2 className="size-3 text-zinc-100" />
                   </div>)
                 }
                 

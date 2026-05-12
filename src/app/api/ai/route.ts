@@ -52,6 +52,7 @@ export async function POST(request: Request) {
       
       messages: await convertToModelMessages(messages),
       stopWhen: stepCountIs(5),
+      system: `Always return Markdown answers.`
     });
 
     return result.toUIMessageStreamResponse();
