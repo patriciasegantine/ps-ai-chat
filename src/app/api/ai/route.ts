@@ -1,16 +1,23 @@
-import { convertToModelMessages, stepCountIs, streamText, tool } from "ai";
+import {
+  APICallError,
+  convertToModelMessages,
+  stepCountIs,
+  streamText,
+  tool,
+} from "ai";
 import { NextResponse } from "next/server";
 import { openrouter } from "@/ai/open-router";
 import { z } from "zod/v3";
 
+const userErrorMessage = "Something went wrong. Please try again.";
+
 export async function POST(request: Request) {
   
   const {messages} = await request.json()
-  const { searchParams } = new URL(request.url);
-  const username = searchParams.get("username") || "patriciasegantine";
   if (!process.env.OPENROUTER_API_KEY) {
+    console.error("[OpenRouter] Missing OPENROUTER_API_KEY in environment.");
     return NextResponse.json(
-      { error: "Missing OPENROUTER_API_KEY in environment." },
+      { error: userErrorMessage },
       { status: 500 }
     );
   }
@@ -25,7 +32,7 @@ export async function POST(request: Request) {
             username: z.string().describe("The GitHub username to query.")
           }),
           execute: async ({username}) => {
-            const res = await fetch(`https://api.github.com/users/${username}`);
+            const res = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}`);
             if (!res.ok) {
               throw new Error(`GitHub API error: ${res.statusText}`);
             }
@@ -52,16 +59,24 @@ export async function POST(request: Request) {
       
       messages: await convertToModelMessages(messages),
       stopWhen: stepCountIs(5),
-      system: `Always return Markdown answers.`
+      system: `Always return Markdown answers.`,
+      onError: ({ error }) => {
+        console.error("[OpenRouter]", error);
+      },
     });
 
-    return result.toUIMessageStreamResponse();
+    return result.toUIMessageStreamResponse({
+      onError: () => userErrorMessage,
+    });
     
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unexpected AI provider error.";
-    const status = message.toLowerCase().includes("quota") ? 429 : 502;
+    console.error("[OpenRouter]", error);
 
-    return NextResponse.json({ error: message }, { status });
+    const status =
+      APICallError.isInstance(error) && error.statusCode
+        ? error.statusCode
+        : 502;
+
+    return NextResponse.json({ error: userErrorMessage }, { status });
   }
 }
