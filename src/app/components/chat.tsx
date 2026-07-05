@@ -5,14 +5,17 @@ import { ChatScrollToBottomButton } from "./chat-scroll-to-bottom-button";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { MessageInput } from "./message-input";
 import { Markdown } from "./markdown";
+import { ToolLoading } from "./tool-loading";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, getToolName, isToolUIPart } from "ai";
+
+const chatTransport = new DefaultChatTransport({ api: "/api/ai" });
 
 export function Chat() {
   const [input, setInput] = useState("");
 
-  const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({ api: "/api/ai" }),
+  const { clearError, error, messages, sendMessage, status } = useChat({
+    transport: chatTransport,
   });
 
   function handleInputChange(evt: ChangeEvent<HTMLTextAreaElement>) {
@@ -22,13 +25,13 @@ export function Chat() {
   async function handleSubmit(event?: { preventDefault(): void }) {
     event?.preventDefault();
     if (!input.trim()) return;
+    clearError();
     await sendMessage({ text: input });
     setInput("");
   }
   
   const containerRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTo({
@@ -74,27 +77,47 @@ export function Chat() {
                 
                 <div className="flex flex-col gap-4">
                   {message.parts.map((part, index) => {
-                    if (part.type !== "text") return null;
-                    return (
-                      <div key={index} className="flex-1 prose prose-invert prose-zinc prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-h4:text-base prose-h5:text-sm prose-h6:text-xs">
-                        <Markdown>{part.text}</Markdown>
-                      </div>
-                    );
+                    if (part.type === "text") {
+                      return (
+                        <div key={index} className="flex-1 prose prose-invert prose-zinc prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-h4:text-base prose-h5:text-sm prose-h6:text-xs">
+                          <Markdown>{part.text}</Markdown>
+                        </div>
+                      );
+                    }
+
+                    if (isToolUIPart(part)) {
+                      if (part.state === "output-error") {
+                        return (
+                          <p key={index} role="alert" className="text-sm text-red-400">
+                            {part.errorText}
+                          </p>
+                        );
+                      }
+
+                      if (part.state !== "output-available") {
+                        return (
+                          <ToolLoading key={index} text={`Running ${getToolName(part)}...`} />
+                        );
+                      }
+                    }
+
+                    return null;
                   })}
                 </div>
               </div>
             )
           })}
-          
-          <div ref={bottomRef} />
         </div>
-        
-        <ChatScrollToBottomButton
-          containerRef={containerRef}
-          scrollRef={bottomRef}
-        />
+
+        <ChatScrollToBottomButton containerRef={containerRef} />
       </div>
       
+      {error && (
+        <p role="alert" className="text-sm text-red-400 px-1">
+          {error.message}
+        </p>
+      )}
+
       <MessageInput
         disabled={status === "streaming" || status === "submitted"}
         value={input}
