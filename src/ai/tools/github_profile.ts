@@ -2,6 +2,8 @@ import { github } from "@/lib/octokit";
 import { tool } from "ai";
 import z from "zod";
 
+export type GithubProfileData = Awaited<ReturnType<typeof github.users.getByUsername>>["data"];
+
 export const githubProfile = tool({
     description: 'Fetches the GitHub profile information and public repository URLs for a given username.',
     inputSchema: z.object({

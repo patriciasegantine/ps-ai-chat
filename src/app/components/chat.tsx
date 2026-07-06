@@ -6,10 +6,17 @@ import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { MessageInput } from "./message-input";
 import { Markdown } from "./markdown";
 import { ToolLoading } from "./tool-loading";
+import { GithubProfile } from "./github-profile";
+import type { GithubProfileData } from "@/ai/tools/github_profile";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, getToolName, isToolUIPart } from "ai";
 
 const chatTransport = new DefaultChatTransport({ api: "/api/ai" });
+
+const toolLabels: Record<string, string> = {
+  githubProfile: "Fetching GitHub profile",
+  fetchHTTP: "Fetching URL content",
+};
 
 export function Chat() {
   const [input, setInput] = useState("");
@@ -95,8 +102,15 @@ export function Chat() {
                       }
 
                       if (part.state !== "output-available") {
+                        const toolName = getToolName(part);
                         return (
-                          <ToolLoading key={index} text={`Running ${getToolName(part)}...`} />
+                          <ToolLoading key={index} text={`${toolLabels[toolName] ?? `Running ${toolName}`}...`} />
+                        );
+                      }
+
+                      if (getToolName(part) === "githubProfile") {
+                        return (
+                          <GithubProfile key={index} data={part.output as GithubProfileData} />
                         );
                       }
                     }
