@@ -35,7 +35,7 @@ export default function NotFound() {
 
         <div className="mt-10 flex items-center gap-2 text-xs text-zinc-600">
           <Home className="size-3.5" aria-hidden="true" />
-          <span>ftr-ai-sdk</span>
+          <span>ps-ai-chat</span>
         </div>
       </section>
     </main>
